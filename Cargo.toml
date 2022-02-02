@@ -1,0 +1,16 @@
+[package]
+name = "octu"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "octu"
+path = "src/lib.rs"
+doctest = false
+
+[dependencies]
+bitlab = "1.1.0"
+
+[[bin]]
+name = "octu_asm"
+path = "src/main.rs"
