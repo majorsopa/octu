@@ -1,5 +1,5 @@
 pub mod octu_cpu;
-mod octu_mem;
+pub mod octu_mem;
 
 pub use crate::octu_cpu::OctuCPU;
 pub use crate::octu_mem::OctuMem;

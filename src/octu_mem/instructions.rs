@@ -2,25 +2,20 @@ pub use crate::octu_cpu::registers::Register;
 
 #[derive(Debug)]
 pub enum Instruction {
-  Push(Value),
-  Pop(Value),
-  Mov(Register, Value),
+  Push,
+  Pop,
+  Mov,
   
-  Jmp(u16),
-  Jz(u16),
-  Jnz(u16),
+  Jmp,
+  Jz,
+  Jnz,
   Ret,
+  Int,
   
-  Inc(Register),
-  Dec(Register),
-  Add(Register, Value),
-  Sub(Register, Value),
-  Mul(Register, Value),
-  Div(Register, Value),
-}
-
-#[derive(Debug)]
-pub enum Value {
-  Register(Register),
-  Literal(u8)
+  Inc,
+  Dec,
+  Add,
+  Sub,
+  Mul,
+  Div,
 }

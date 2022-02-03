@@ -2,9 +2,10 @@ pub mod instructions;
 
 use crate::octu_mem::instructions::Instruction;
 
-pub struct OctuMem(Vec<u8>);
 
 #[derive(Debug)]
+pub struct OctuMem(Vec<u8>);
+
 impl OctuMem {
   pub fn new(length_in_bytes: usize) -> Self {
     let mut memory_vec = Vec::new();

@@ -3,8 +3,8 @@ pub mod interrupts;
 
 use std::collections::HashMap;
 
-pub use crate::octu_cpu::registers::Register;
-pub use crate::octu_cpu::interrupts::Interrupt;
+use crate::octu_cpu::registers::Register;
+use crate::octu_cpu::interrupts::Interrupt;
 
 use bitlab::SingleBits;
 
