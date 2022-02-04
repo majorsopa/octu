@@ -1,4 +1,0 @@
-run = "cargo run"
-
-[nix]
-channel = "stable-21_11"
