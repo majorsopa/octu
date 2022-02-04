@@ -1,6 +1,6 @@
 pub use crate::octu_cpu::registers::Register;
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub enum Instruction {
   Push,
   Pop,
@@ -18,4 +18,6 @@ pub enum Instruction {
   Sub,
   Mul,
   Div,
+
+  SetConstant,
 }

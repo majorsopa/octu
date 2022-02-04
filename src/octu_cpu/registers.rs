@@ -1,4 +1,4 @@
-#[derive(Hash, Eq, PartialEq, Debug)]
+#[derive(Hash, Eq, PartialEq, Debug, Copy, Clone)]
 pub enum Register {
   A,       // scratch registers
   B,
