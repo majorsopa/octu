@@ -4,5 +4,6 @@ main
   add b c
   push print
 constants
-  hello_world1 "hello"
-  hello_world2 "world"
+  ;  hello_world1 "hello"
+  ;  hello_world2 "world"
+  peb i8 127

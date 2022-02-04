@@ -44,7 +44,8 @@ enum Value {
 #[derive(Debug)]
 enum Literal {
   Str(String),
-  Int(u8),
+  UInt(u8),
+  IInt(i8),
   // todo add floating point stuff
 }
 
@@ -115,6 +116,8 @@ fn parse(contents: String) -> Vec<Operation> {
   let mut ready_for_operation_counter = 0;
 
   let mut in_comment = false;
+  let mut next_is_uint = false;
+  let mut next_is_iint = false;
   let mut in_string = false;
   let mut main_found = false;
   let mut constants_found = false;
@@ -134,6 +137,16 @@ fn parse(contents: String) -> Vec<Operation> {
     }
 
     if in_comment { continue; }
+
+    if lexeme == i8_keyword {
+      next_is_iint = true;
+      lexeme = "".to_string();
+      continue;
+    } else if lexeme == u8_keyword {
+      next_is_uint = true;
+      lexeme = "".to_string();
+      continue;
+    }
     
     if in_string {
       lexeme.push(character);
@@ -212,7 +225,15 @@ fn parse(contents: String) -> Vec<Operation> {
           lexeme = "".to_string();
           need_constant_value = true;
         } else {
-          constant_value = Some(Value::Literal(Literal::Str(lexeme)));
+          constant_value = Some(Value::Literal(if next_is_uint {
+            next_is_uint = false;
+            Literal::UInt(lexeme.parse::<u8>().expect(&*format!("invalid u8 `{}`", lexeme)))
+          } else if next_is_iint {
+            next_is_iint = false;
+            Literal::IInt(lexeme.parse::<i8>().expect(&*format!("invalid i8 `{}`", lexeme)))
+          } else {
+            Literal::Str(lexeme)
+          }));
           lexeme = "".to_string();
           need_constant_value = false;
         }
@@ -237,6 +258,15 @@ fn parse(contents: String) -> Vec<Operation> {
       (constant_name, constant_value) = (None, None);
     }
   }
+
+  assert!(!{
+    instruction.is_some() || 
+    rhs.is_some() || 
+    lhs.is_some() || 
+    instruction_type.is_some() ||
+    constant_name.is_some() || 
+    constant_value.is_some()
+  }, "syntax error");
   
   println!("{:#?}", operation_vec);
   instructions_vec
