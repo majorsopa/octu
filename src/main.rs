@@ -92,22 +92,26 @@ fn parse(contents: String) -> Vec<Operation> {
   let mut constant_value = None;
   let mut need_constant_value = false;
 
+  let mut in_comment = false;
   let mut in_string = false;
   let mut main_found = false;
   let mut constants_found = false;
   let mut main_first = true;
   for character in contents.chars() {
 
-    if character == '\"' {
+    if character == ';' {
+      in_comment = !in_comment;
+      continue;
+    } else if character == '\r' || character == '\n' {
+      in_comment = false;
+    } else if character == '\"' {
       if constants_found && !(main_found ^ main_first) && need_constant_value {
-        if in_string {
-          in_string = false;
-        } else {
-          in_string = true;
-        }
+        in_string = !in_string;
         continue;
-      } else { panic!("unexpected string"); }
+      } else if !in_comment { panic!("unexpected string"); }
     }
+
+    if in_comment { continue; }
     
     if in_string {
       lexeme.push(character);

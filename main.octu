@@ -1,6 +1,6 @@
 main 
   mov a d 
-  mov b c
+  mov b c ; "u
 constants 
   tester_const "h"
   other_const "add"
