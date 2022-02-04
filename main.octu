@@ -1,2 +1,6 @@
-main mov a d
-constants bruh "h"
+main 
+  mov a d 
+  mov b c
+constants 
+  tester_const "h"
+  other_const "add"

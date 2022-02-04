@@ -147,6 +147,11 @@ fn parse(contents: String) -> Vec<Operation> {
         }
       } else if constants_found {
         if constant_name.is_none() {
+          assert!(!{
+            instructions_table.contains_key(&*lexeme) ||
+            registers_table.contains_key(&*lexeme)
+          }, "constant name `{}` is a taken keyword", lexeme);
+          
           constant_name = Some(Value::Literal(Literal::Str(lexeme)));
           lexeme = "".to_string();
           need_constant_value = true;
