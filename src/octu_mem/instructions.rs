@@ -1,5 +1,3 @@
-pub use crate::octu_cpu::registers::Register;
-
 #[derive(Debug, Copy, Clone)]
 pub enum Instruction {
   Push,

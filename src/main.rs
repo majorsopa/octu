@@ -3,6 +3,7 @@ use std::collections::HashMap;
 
 use octu::octu_mem::instructions::Instruction;
 use octu::octu_cpu::registers::Register;
+use octu::octu_cpu::interrupts::Interrupt;
 
 
 const MAIN_FILE: &str = "main.octu";
@@ -16,14 +17,16 @@ fn main() {
 
 #[derive(Debug)]
 struct Operation {
+  instruction_type: InstructionType,
   instruction: Instruction,
-  lhs: Value,
-  rhs: Value,
+  lhs: Option<Value>,
+  rhs: Option<Value>,
 }
 
 impl Operation {
-  pub fn new(instruction: Instruction, lhs: Value, rhs: Value) -> Self {
+  pub fn new(instruction_type: InstructionType, instruction: Instruction, lhs: Option<Value>, rhs: Option<Value>) -> Self {
     Self {
+      instruction_type,
       instruction,
       lhs,
       rhs,
@@ -35,6 +38,7 @@ impl Operation {
 enum Value {
   Literal(Literal),
   Register(Register),
+  Interrupt(Interrupt),
 }
 
 #[derive(Debug)]
@@ -42,6 +46,13 @@ enum Literal {
   Str(String),
   Int(u8),
   // todo add floating point stuff
+}
+
+#[derive(Debug, PartialEq)]
+enum InstructionType {
+  Solo,
+  Unary,
+  Binary,
 }
 
 fn parse(contents: String) -> Vec<Operation> {
@@ -57,23 +68,32 @@ fn parse(contents: String) -> Vec<Operation> {
     ("d", Register::D),
     ("f1", Register::F1),
   ]);
-  let instructions_table = HashMap::from([
-    ("push", Instruction::Push),
-    ("pop", Instruction::Pop),
+  let binary_instructions = HashMap::from([
     ("mov", Instruction::Mov),
-    
-    ("jmp", Instruction::Jmp),
-    ("jz", Instruction::Jz),
-    ("jnz", Instruction::Jnz),
-    ("ret", Instruction::Ret),
-    ("int", Instruction::Int),
 
-    ("inc", Instruction::Inc),
-    ("dec", Instruction::Dec),
     ("add", Instruction::Add),
     ("sub", Instruction::Sub),
     ("mul", Instruction::Mul),
     ("div", Instruction::Div),
+  ]);
+  let unary_instructions = HashMap::from([
+    ("push", Instruction::Push),
+    ("pop", Instruction::Pop),
+
+    ("jmp", Instruction::Jmp),
+    ("jz", Instruction::Jz),
+    ("jnz", Instruction::Jnz),
+
+    ("inc", Instruction::Inc),
+    ("dec", Instruction::Dec),
+  ]);
+  let solo_instructions = HashMap::from([
+    ("int", Instruction::Int),
+
+    ("ret", Instruction::Ret),
+  ]);
+  let interrupts = HashMap::from([
+    ("print", Interrupt::Print)
   ]);
   
   let octu_asm_main = "main";
@@ -88,9 +108,11 @@ fn parse(contents: String) -> Vec<Operation> {
   let mut instruction = None;
   let mut lhs = None;
   let mut rhs = None;
+  let mut instruction_type = None;
   let mut constant_name = None;
   let mut constant_value = None;
   let mut need_constant_value = false;
+  let mut ready_for_operation_counter = 0;
 
   let mut in_comment = false;
   let mut in_string = false;
@@ -133,16 +155,39 @@ fn parse(contents: String) -> Vec<Operation> {
       
       
       if main_found && !constants_found && main_first {
-        if instructions_table.contains_key(&*lexeme) {
+        if {
+          solo_instructions.contains_key(&*lexeme) ||
+          unary_instructions.contains_key(&*lexeme) ||
+          binary_instructions.contains_key(&*lexeme)
+        } {
           if instruction.is_some() {
             panic!("syntax error");
           } else {
-            instruction = Some(*instructions_table.get(&*lexeme).unwrap());
+            instruction = Some(*{
+              ready_for_operation_counter += 1;
+              if solo_instructions.contains_key(&*lexeme) {
+                instruction_type = Some(InstructionType::Solo);
+                solo_instructions.get(&*lexeme)
+              } else if unary_instructions.contains_key(&*lexeme) {
+                instruction_type = Some(InstructionType::Unary);
+                unary_instructions.get(&*lexeme)
+              } else {
+                instruction_type = Some(InstructionType::Binary);
+                binary_instructions.get(&*lexeme)
+              }
+            }.unwrap());
             lexeme = "".to_string();
           }
-        } else if instruction.is_some() && registers_table.contains_key(&*lexeme) {
+        } else if instruction.is_some() && (registers_table.contains_key(&*lexeme) || interrupts.contains_key(&*lexeme)) {
+          ready_for_operation_counter += 1;
           if lhs.is_none() {
-            lhs = Some(Value::Register(*registers_table.get(&*lexeme).unwrap()));
+            lhs = {
+              if registers_table.contains_key(&*lexeme) {
+                Some(Value::Register(*registers_table.get(&*lexeme).unwrap()))
+              } else {
+                Some(Value::Interrupt(*interrupts.get(&*lexeme).unwrap()))
+              }
+            };
             lexeme = "".to_string();
           } else if rhs.is_none() {
             rhs = Some(Value::Register(*registers_table.get(&*lexeme).unwrap()));
@@ -156,8 +201,11 @@ fn parse(contents: String) -> Vec<Operation> {
       } else if constants_found {
         if constant_name.is_none() {
           assert!(!{
-            instructions_table.contains_key(&*lexeme) ||
-            registers_table.contains_key(&*lexeme)
+            solo_instructions.contains_key(&*lexeme) ||
+            unary_instructions.contains_key(&*lexeme) ||
+            binary_instructions.contains_key(&*lexeme) ||
+            registers_table.contains_key(&*lexeme) ||
+            interrupts.contains_key(&*lexeme)
           }, "constant name `{}` is a taken keyword", lexeme);
           
           constant_name = Some(Value::Literal(Literal::Str(lexeme)));
@@ -171,15 +219,20 @@ fn parse(contents: String) -> Vec<Operation> {
       }
     }
 
-    if instruction.is_some() && lhs.is_some() && rhs.is_some() {
+    if {
+      (ready_for_operation_counter == 1 && instruction_type == Some(InstructionType::Solo)) ||
+      (ready_for_operation_counter == 2 && instruction_type == Some(InstructionType::Unary)) ||
+      (ready_for_operation_counter == 3 && instruction_type == Some(InstructionType::Binary))
+    } {
       operation_vec.push(
-        Operation::new(instruction.unwrap(), lhs.unwrap(), rhs.unwrap())
+        Operation::new(instruction_type.unwrap(), instruction.unwrap(), lhs, rhs)
       );
-      (instruction, lhs, rhs) = (None, None, None);
+      (instruction_type, instruction, lhs, rhs) = (None, None, None, None);
+      ready_for_operation_counter = 0;
     }
     if constant_name.is_some() && constant_value.is_some() {
       operation_vec.push(
-        Operation::new(Instruction::SetConstant, constant_name.unwrap(), constant_value.unwrap())
+        Operation::new(InstructionType::Binary, Instruction::SetConstant, constant_name, constant_value)
       );
       (constant_name, constant_value) = (None, None);
     }

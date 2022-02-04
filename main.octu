@@ -1,6 +1,8 @@
 main 
-  mov a d 
-  mov b c ; "u
-constants 
-  tester_const "h"
-  other_const "add"
+  int
+  inc d
+  add b c
+  push print
+constants
+  hello_world1 "hello"
+  hello_world2 "world"
