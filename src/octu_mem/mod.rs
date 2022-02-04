@@ -1,6 +1,6 @@
-pub mod instructions;
+mod instructions;
 
-use crate::octu_mem::instructions::Instruction;
+pub use crate::octu_mem::instructions::Instruction;
 
 
 #[derive(Debug)]

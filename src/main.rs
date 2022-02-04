@@ -1,9 +1,9 @@
 use std::fs;
 use std::collections::HashMap;
 
-use octu::octu_mem::instructions::Instruction;
-use octu::octu_cpu::registers::Register;
-use octu::octu_cpu::interrupts::Interrupt;
+use octu::octu_mem::Instruction;
+use octu::octu_cpu::*;
+use octu::OctuVM;
 
 
 const MAIN_FILE: &str = "main.octu";
@@ -11,50 +11,13 @@ const MAIN_FILE: &str = "main.octu";
 fn main() {
   let octu_main = fs::read_to_string(MAIN_FILE).expect(&*format!("cannot find file {}", MAIN_FILE));
 
-  parse(octu_main);
+  let mut octu_vm = OctuVM::new_default_memory(parse(octu_main));
+
+  let exit_code = octu_vm.run();
+  
+  println!("OctuVM finished with exit code {}", exit_code);
 }
 
-
-#[derive(Debug)]
-struct Operation {
-  instruction_type: InstructionType,
-  instruction: Instruction,
-  lhs: Option<Value>,
-  rhs: Option<Value>,
-}
-
-impl Operation {
-  pub fn new(instruction_type: InstructionType, instruction: Instruction, lhs: Option<Value>, rhs: Option<Value>) -> Self {
-    Self {
-      instruction_type,
-      instruction,
-      lhs,
-      rhs,
-    }
-  }
-}
-
-#[derive(Debug)]
-enum Value {
-  Literal(Literal),
-  Register(Register),
-  Interrupt(Interrupt),
-}
-
-#[derive(Debug)]
-enum Literal {
-  Str(String),
-  UInt(u8),
-  IInt(i8),
-  // todo add floating point stuff
-}
-
-#[derive(Debug, PartialEq)]
-enum InstructionType {
-  Solo,
-  Unary,
-  Binary,
-}
 
 fn parse(contents: String) -> Vec<Operation> {
   // this is a hacky workaround but idc
@@ -103,7 +66,6 @@ fn parse(contents: String) -> Vec<Operation> {
   let i8_keyword = "i8";
   
   
-  let mut instructions_vec = Vec::new();
   let mut operation_vec = Vec::new();
   let mut lexeme = String::new();
   let mut instruction = None;
@@ -267,7 +229,7 @@ fn parse(contents: String) -> Vec<Operation> {
     constant_name.is_some() || 
     constant_value.is_some()
   }, "syntax error");
+
   
-  println!("{:#?}", operation_vec);
-  instructions_vec
+  operation_vec
 }

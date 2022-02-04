@@ -1,9 +1,8 @@
-main 
-  int
-  inc d
-  add b c
+main
+  push hello_world
+  push length
   push print
+  int
 constants
-  ;  hello_world1 "hello"
-  ;  hello_world2 "world"
-  peb i8 127
+  hello_world "hello world"
+  length u8 12

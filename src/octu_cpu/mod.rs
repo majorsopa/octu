@@ -1,17 +1,19 @@
-pub mod registers;
-pub mod interrupts;
+mod registers;
+mod interrupts;
+mod operation;
 
 use std::collections::HashMap;
 
-use crate::octu_cpu::registers::Register;
-use crate::octu_cpu::interrupts::Interrupt;
+pub use crate::octu_cpu::registers::Register;
+pub use crate::octu_cpu::interrupts::Interrupt;
+pub use crate::octu_cpu::operation::*;
 
 use bitlab::SingleBits;
 
 
 #[derive(Debug)]
 pub struct OctuCPU {
-  stack: Vec<u8>,
+  stack: Vec<Operation>,
   registers: HashMap<Register, u8>,
   syscalls: HashMap<u8, Interrupt>,
 }
@@ -43,12 +45,29 @@ impl OctuCPU {
 
 // stack stuff
 impl OctuCPU {
-  pub fn push(&mut self, to_push: u8) {
+  pub fn push(&mut self, to_push: Operation) {
     self.stack.push(to_push);
   }
 
-  pub fn pop(&mut self) -> u8 {
+  pub fn pop(&mut self) -> Operation {
     self.stack.pop().unwrap()
+  }
+
+  pub fn replace_stack(&mut self, new_stack: Vec<Operation>) {
+    self.stack = new_stack;
+  }
+
+  pub fn is_stack_empty(&self) -> bool {
+    self.stack.is_empty()
+  }
+}
+
+// other stuff
+impl OctuCPU {
+  pub fn do_operation(&mut self) -> u8 {
+    let exit_code = 0;
+
+    exit_code
   }
 }
 
@@ -66,6 +85,15 @@ impl Default for OctuCPU {
       syscalls: HashMap::from([
         (0, Interrupt::Print)
       ]),
+    }
+  }
+}
+
+impl From<Vec<Operation>> for OctuCPU {
+  fn from(stack: Vec<Operation>) -> Self {
+    Self {
+      stack,
+      ..Default::default()
     }
   }
 }
