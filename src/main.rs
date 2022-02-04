@@ -78,6 +78,8 @@ fn parse(contents: String) -> Vec<Operation> {
   
   let octu_asm_main = "main";
   let octu_asm_constants = "constants";
+  let u8_keyword = "u8";
+  let i8_keyword = "i8";
   
   
   let mut instructions_vec = Vec::new();
@@ -120,6 +122,8 @@ fn parse(contents: String) -> Vec<Operation> {
         constants_found = true;
         if !main_found { main_first = false; }
         lexeme = "".to_string();
+      } else if &*lexeme == u8_keyword {
+        
       }
       if lexeme == "" { continue; }
       
@@ -161,8 +165,6 @@ fn parse(contents: String) -> Vec<Operation> {
           need_constant_value = false;
         }
       }
-
-      
     }
 
     if instruction.is_some() && lhs.is_some() && rhs.is_some() {
