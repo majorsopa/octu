@@ -18,6 +18,26 @@ impl Operation {
       rhs,
     }
   }
+
+  pub fn if_constant_get_name(&self) -> Option<String> {
+    if self.instruction == Instruction::SetConstant {
+      match &self.lhs {
+        Some(val) => match val {
+          Value::Literal(_) => None,
+          Value::Register(_) => None,
+          Value::Interrupt(_) => None,
+          Value::Constant(name) => Some(name.to_string()),
+        }
+        None => None,
+      }
+    } else {
+      None
+    }
+  }
+
+  pub fn is_set_constant(&self) -> bool {
+    self.instruction == Instruction::SetConstant
+  }
 }
 
 #[derive(Debug)]
@@ -25,6 +45,7 @@ pub enum Value {
   Literal(Literal),
   Register(Register),
   Interrupt(Interrupt),
+  Constant(String),
 }
 
 #[derive(Debug)]

@@ -11,7 +11,11 @@ const MAIN_FILE: &str = "main.octu";
 fn main() {
   let octu_main = fs::read_to_string(MAIN_FILE).expect(&*format!("cannot find file {}", MAIN_FILE));
 
-  let mut octu_vm = OctuVM::new_default_memory(parse(octu_main));
+  let mut octu_vm = OctuVM::new_default_memory({
+    let parsed = parse(octu_main);
+    process(&parsed);
+    parsed
+  });
 
   let exit_code = octu_vm.run();
   
@@ -153,25 +157,30 @@ fn parse(contents: String) -> Vec<Operation> {
             }.unwrap());
             lexeme = "".to_string();
           }
-        } else if instruction.is_some() && (registers_table.contains_key(&*lexeme) || interrupts.contains_key(&*lexeme)) {
+        } else if instruction.is_some() {
           ready_for_operation_counter += 1;
-          if lhs.is_none() {
-            lhs = {
+          let hs = || {
+            Some({
               if registers_table.contains_key(&*lexeme) {
-                Some(Value::Register(*registers_table.get(&*lexeme).unwrap()))
+                Value::Register(*registers_table.get(&*lexeme).unwrap())
+              } else if interrupts.contains_key(&*lexeme) {
+                Value::Interrupt(*interrupts.get(&*lexeme).unwrap())
               } else {
-                Some(Value::Interrupt(*interrupts.get(&*lexeme).unwrap()))
+                Value::Constant(lexeme)
               }
-            };
+            })
+          };
+          if lhs.is_none() {
+            lhs = hs();
             lexeme = "".to_string();
           } else if rhs.is_none() {
-            rhs = Some(Value::Register(*registers_table.get(&*lexeme).unwrap()));
+            rhs = hs();
             lexeme = "".to_string();
           } else {
             panic!("syntax error");
           }
         } else {
-          panic!("unknown lexeme `{}`", lexeme);
+          panic!("syntax error");
         }
       } else if constants_found {
         if constant_name.is_none() {
@@ -183,7 +192,7 @@ fn parse(contents: String) -> Vec<Operation> {
             interrupts.contains_key(&*lexeme)
           }, "constant name `{}` is a taken keyword", lexeme);
           
-          constant_name = Some(Value::Literal(Literal::Str(lexeme)));
+          constant_name = Some(Value::Constant(lexeme));
           lexeme = "".to_string();
           need_constant_value = true;
         } else {
@@ -208,7 +217,12 @@ fn parse(contents: String) -> Vec<Operation> {
       (ready_for_operation_counter == 3 && instruction_type == Some(InstructionType::Binary))
     } {
       operation_vec.push(
-        Operation::new(instruction_type.unwrap(), instruction.unwrap(), lhs, rhs)
+        Operation::new(
+          instruction_type.unwrap(), 
+          instruction.unwrap(), 
+          lhs, 
+          rhs
+        )
       );
       (instruction_type, instruction, lhs, rhs) = (None, None, None, None);
       ready_for_operation_counter = 0;
@@ -230,6 +244,35 @@ fn parse(contents: String) -> Vec<Operation> {
     constant_value.is_some()
   }, "syntax error");
 
-  
+  println!("{:#?}", operation_vec);
   operation_vec
+}
+
+fn process(operations: &Vec<Operation>) {
+  let mut defined_constants = Vec::new();
+  let mut used_constants = Vec::new();
+  for operation in operations {
+    let possible_name = operation.if_constant_get_name();
+    if possible_name.is_some() {
+      if operation.is_set_constant() {
+        defined_constants.push(possible_name.unwrap());
+      } else {
+        used_constants.push(possible_name.unwrap());
+      }
+    }
+  }
+  
+  let dedup = |slice: &Vec<String>| {
+    (1..slice.len()).any(|i| slice[i..].contains(&slice[i - 1]))
+  };
+
+  // maybe take advantage of how it's already sorted to do the above faster, if I feel like it
+  defined_constants.sort_unstable();
+  used_constants.sort_unstable();
+  
+  assert!(!dedup(&defined_constants), "duplicated constant declaration");
+
+  for constant in used_constants {
+    assert!(defined_constants.contains(&constant), "unknown constant `{}`", constant);
+  }
 }
